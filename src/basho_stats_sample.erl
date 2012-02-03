@@ -30,6 +30,10 @@
 
 -include("stats.hrl").
 
+-ifdef(EQC).
+-export([prop_main/0]).
+-endif.
+
 -record(state, { n = 0,
                  min = 'NaN',
                  max = 'NaN',
@@ -130,12 +134,14 @@ lists_equal([V1 | R1], [V2 | R2]) ->
             false
     end.
 
+prop_main() ->
+    ?FORALL(Xlen, choose(2, 100),
+        ?LET(Xs, vector(Xlen, int()),
+            lists_equal(basho_stats_utils:r_run(Xs,"c(min(x), mean(x), max(x), var(x), sd(x))"),
+                tuple_to_list(summary(update_all(Xs, new())))))).
+
 qc_test() ->
-    Prop = ?LET(Xlen, choose(2, 100),
-                ?FORALL(Xs, vector(Xlen, int()),
-                        lists_equal(basho_stats_utils:r_run(Xs,"c(min(x), mean(x), max(x), var(x), sd(x))"),
-                                    tuple_to_list(summary(update_all(Xs, new())))))),
-    true = eqc:quickcheck(Prop).
+    true = eqc:quickcheck(prop_main()).
 
 -endif.
 

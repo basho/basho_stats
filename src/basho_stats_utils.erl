@@ -58,13 +58,19 @@ r_port() ->
     end,
 
     %% Check the status of the port
-    port_command(Port, "write('', file=stdout())\n"),
-    receive
-        {Port, {data, {eol, []}}} ->
-            {ok, Port};
-        {Port, {data, {eol, Other}}} ->
+    try port_command(Port, "write('', file=stdout())\n") of
+        _ ->
+            receive
+                {Port, {data, {eol, []}}} ->
+                    {ok, Port};
+                {Port, {data, {eol, Other}}} ->
+                    erlang:erase(r_port),
+                    {error, Other}
+            end
+    catch
+        error:badarg ->
             erlang:erase(r_port),
-            {error, Other}
+            {error, port_closed}
     end.
 
 r_simple_read_loop(Port, Acc) ->
@@ -72,7 +78,23 @@ r_simple_read_loop(Port, Acc) ->
         {Port, {data, {eol, []}}} ->
             lists:reverse(Acc);
         {Port, {data, {eol, Line}}} ->
-            r_simple_read_loop(Port, [to_number(Line) | Acc]);
+            case Line of
+                "Error"++_ ->
+                    Error = get_error(Port, [Line]),
+                    exit({error, Error});
+                _ ->
+                    r_simple_read_loop(Port, [to_number(Line) | Acc])
+            end;
+        {Port, {exit_status, _}} ->
+            lists:reverse(Acc)
+    end.
+
+get_error(Port, Acc) ->
+    receive
+        {Port, {data, {eol, []}}} ->
+            lists:reverse(Acc);
+        {Port, {data, {eol, Line}}} ->
+            get_error(Port, [Line | Acc]);
         {Port, {exit_status, _}} ->
             lists:reverse(Acc)
     end.
