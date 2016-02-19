@@ -9,5 +9,8 @@
   {applications, [kernel, 
                   stdlib, 
                   sasl]},
-  {env, []}
+  {env, []},
+  {maintainers,["basho", "Heinz N. Gies"]},
+  {licenses,["Other"]},
+  {links,[{"Github","https://github.com/basho/basho_stats"}]}
 ]}.
