@@ -61,9 +61,9 @@ r_port() ->
     try port_command(Port, "write('', file=stdout())\n") of
         _ ->
             receive
-                {Port, {data, {eol, []}}} ->
+                {_Port, {data, {eol, []}}} ->
                     {ok, Port};
-                {Port, {data, {eol, Other}}} ->
+                {_Port, {data, {eol, Other}}} ->
                     erlang:erase(r_port),
                     {error, Other}
             end

@@ -1,6 +1,9 @@
+include tools.mk
 
-all:
-	./rebar compile eunit
+all: compile test
+
+compile:
+	@./rebar compile
 
 clean:
 	./rebar clean
