@@ -47,15 +47,14 @@ r_run(Input, Command) ->
     end.
 
 r_port() ->
-    case erlang:get(r_port) of
+    Port = case erlang:get(r_port) of
         undefined ->
-            Port = open_port({spawn, "R --vanilla --slave"},
-                             [use_stdio, exit_status, {line, 16384},
-                              stderr_to_stdout]),
-            erlang:put(r_port, Port);
-        Port ->
-            ok
+            open_port({spawn, "R --vanilla --slave"},
+                      [use_stdio, exit_status, {line, 16384},
+                       stderr_to_stdout]);
+        P -> P
     end,
+    erlang:put(r_port, Port),
 
     %% Check the status of the port
     try port_command(Port, "write('', file=stdout())\n") of
