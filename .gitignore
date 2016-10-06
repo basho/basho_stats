@@ -1,3 +1,4 @@
 ebin/*.beam
 .eunit
 _build
+deps
