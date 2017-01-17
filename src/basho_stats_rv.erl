@@ -1,7 +1,6 @@
 %% -------------------------------------------------------------------
 %%
-%% stats: Statistics Suite for Erlang
-%%
+%% Copyright (c) 2010-2017 Basho Technologies, Inc.
 %% Copyright (c) 2009 Dave Smith (dizzyd@dizzyd.com)
 %%
 %% This file is provided to you under the Apache License,
@@ -19,48 +18,66 @@
 %% under the License.
 %%
 %% -------------------------------------------------------------------
+
 -module(basho_stats_rv).
 
--export([uniform/0,
-         exponential/1,
-         poisson/1,
-         normal/2]).
-
--on_load(init/0).
-
-init() ->
-    rand_compat:init(),
-    ok.
+-export([
+    exponential/1,
+    normal/2,
+    poisson/1,
+    uniform/0
+]).
 
 %% ====================================================================
 %% Public API
 %% ====================================================================
 
 %%
-%% Generates a uniformly-distributed random variable (wrapper for convenience)
+%% @doc Generates a uniformly-distributed random float.
 %%
+-ifdef(NO_RAND_MODULE).
 uniform() ->
-    rnd:uniform().
+    % Make sure the PRNG in this process is seeded.
+    % Alas, it *could* have been previously seeded with the default, but we
+    % can't tell that, and if someone took care seeding it with good entropy
+    % we don't want to throw that away on them.
+    case erlang:get(random_seed) of
+        undefined ->
+            {A, B, C} = os:timestamp(),
+            _ = random:seed(
+                erlang:phash2({A, erlang:make_ref()}, 1 bsl 32),
+                erlang:phash2({B, erlang:self()}, 1 bsl 32), C),
+            ok;
+        _ ->
+            ok
+    end,
+    random:uniform().
+-else.
+-compile({inline, [uniform/0]}).
+uniform() ->
+    rand:uniform().
+-endif.
 
 %%
-%% Generates an exponential-distributed random variable, using inverse function
+%% @doc Generates an exponential-distributed random variable, using inverse function.
 %%
 exponential(Lambda) ->
-    -math:log(rnd:uniform()) / Lambda.
+    -math:log(uniform()) / Lambda.
 
 %%
-%% Generates a Poisson-distributed random variable by summing exponential rvs
-%% (May be slow!!).
+%% @doc Generates a Poisson-distributed random variable by summing exponential rvs.
+%%
+%% Warning: This may be slow!!
 %%
 poisson(Lambda) ->
     poisson_rv_loop(Lambda, 0.0, -1).
 
 %%
-%% Generates a Normal-distributed random variable, using Box-Muller method
+%% @doc Generates a Normal-distributed random variable, using Box-Muller method.
 %%
 normal(Mean, Sigma) ->
-    Rv1 = rnd:uniform(),
-    Rv2 = rnd:uniform(),
+    Rv1 = uniform(),
+    Rv2 = uniform(),
     Rho = math:sqrt(-2 * math:log(1-Rv2)),
     Rho * math:cos(2 * math:pi() * Rv1) * Sigma + Mean.
 
@@ -70,6 +87,6 @@ normal(Mean, Sigma) ->
 %% ====================================================================
 
 poisson_rv_loop(Lambda, Sum, N) when Sum < Lambda ->
-    poisson_rv_loop(Lambda, Sum - math:log(rnd:uniform()), N+1);
+    poisson_rv_loop(Lambda, Sum - math:log(uniform()), N+1);
 poisson_rv_loop(_Lambda, _Sum, N) ->
     N.

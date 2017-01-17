@@ -1,16 +1,11 @@
-{application, basho_stats,
- [{description, "Basic Erlang statistics library"},
-  {vsn, "1.0.3"},
-  {modules, [ basho_stats_sample,
-              basho_stats_histogram,
-              basho_stats_rv,
-              basho_stats_utils]},
-  {registered, []},
-  {applications, [kernel, 
-                  stdlib, 
-                  sasl]},
-  {env, []},
-  {maintainers,["basho", "Heinz N. Gies"]},
-  {licenses,["Other"]},
-  {links,[{"Github","https://github.com/basho/basho_stats"}]}
+{application, basho_stats, [
+    {description,   "Basic Erlang statistics library"},
+    {vsn,           git},
+    {modules,       []},
+    {registered,    []},
+    {applications,  [kernel, stdlib, sasl]},
+    {env,           []},
+    {maintainers,   ["Basho Technologies, Inc.", "Heinz N. Gies"]},
+    {licenses,      ["Apache"]},
+    {links,         [{"Github", "https://github.com/basho/basho_stats"}]}
 ]}.

@@ -1,7 +1,6 @@
 %% -------------------------------------------------------------------
 %%
-%% stats: Statistics Suite for Erlang
-%%
+%% Copyright (c) 2011-2017 Basho Technologies, Inc.
 %% Copyright (c) 2009 Dave Smith (dizzyd@dizzyd.com)
 %%
 %% This file is provided to you under the Apache License,
@@ -67,11 +66,11 @@ new(MinVal, MaxVal, NumBins) ->
 %%
 update(Value, Hist) ->
     Bin = which_bin(Value, Hist),
-    case gb_trees:lookup(Bin, Hist#hist.bins) of
-        {value, Counter} ->
-            ok;
+    Counter = case gb_trees:lookup(Bin, Hist#hist.bins) of
+        {value, Val} ->
+            Val;
         none ->
-            Counter = 0
+            0
     end,
     Hist#hist { n = Hist#hist.n + 1,
                 bins = gb_trees:enter(Bin, Counter + 1, Hist#hist.bins),
@@ -81,7 +80,7 @@ update(Value, Hist) ->
 update_all(Values, Hist) ->
     lists:foldl(fun(Value, H) -> update(Value, H) end,
                 Hist, Values).
-    
+
 
 
 %%
@@ -147,7 +146,7 @@ which_bin(Value, Hist) ->
             Bin
     end.
 
-            
+
 quantile_itr(none, _Samples, _MaxSamples) ->
     max;
 quantile_itr({Bin, Counter, Itr2}, Samples, MaxSamples) ->
@@ -171,7 +170,7 @@ bin_count(Bin, Hist) ->
          none ->
             0
     end.
-            
+
 %% ===================================================================
 %% Unit Tests
 %% ===================================================================
