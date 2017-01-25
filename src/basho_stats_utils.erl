@@ -1,7 +1,6 @@
 %% -------------------------------------------------------------------
 %%
-%% stats: Statistics Suite for Erlang
-%%
+%% Copyright (c) 2011-2017 Basho Technologies, Inc.
 %% Copyright (c) 2009 Dave Smith (dizzyd@dizzyd.com)
 %%
 %% This file is provided to you under the Apache License,
@@ -19,21 +18,43 @@
 %% under the License.
 %%
 %% -------------------------------------------------------------------
+
+%% @doc Unit Test Helpers.
+%% The functions in this module are only visible when running tests.
 -module(basho_stats_utils).
 
--include("stats.hrl").
-
 -ifdef(TEST).
+-export([
+    r_check/0,
+    r_run/2
+]).
 -include_lib("eunit/include/eunit.hrl").
--compile(export_all).
--endif.
+
+-define(R_KEY, {?MODULE, 'R_exe'}).
+-define(P_KEY, {?MODULE, 'R_port'}).
+-define(R_ERR, {error, missing_R_executable}).
+-define(FMT(Str, Args), lists:flatten(io_lib:format(Str, Args))).
 
 %% ===================================================================
 %% Unit Test Helpers
 %% ===================================================================
 
--ifdef(EUNIT).
+-spec r_check() -> ok | ?R_ERR.
+%%
+%% Checks for the presence of the R executable.
+%%
+r_check() ->
+    case r_exe() of
+        {error, _} = Err ->
+            Err;
+        _ ->
+            ok
+    end.
 
+-spec r_run(Input :: [integer()], Command :: string()) -> [number()].
+%%
+%% Runs R Command with Input.
+%%
 r_run(Input, Command) ->
     case r_port() of
         {ok, Port} ->
@@ -42,33 +63,72 @@ r_run(Input, Command) ->
             port_command(Port, ?FMT("write(~s, ncolumns=1, file=stdout())\n", [Command])),
             port_command(Port, "write('', file=stdout())\n"),
             r_simple_read_loop(Port, []);
-        {error, Reason} ->
-            {error, Reason}
+        {error, _} = Err ->
+            Err
     end.
 
-r_port() ->
-    Port = case erlang:get(r_port) of
-        undefined ->
-            open_port({spawn, "R --vanilla --slave"},
-                      [use_stdio, exit_status, {line, 16384},
-                       stderr_to_stdout]);
-        P -> P
-    end,
-    erlang:put(r_port, Port),
+%% ===================================================================
+%% Internal
+%% ===================================================================
 
-    %% Check the status of the port
-    try port_command(Port, "write('', file=stdout())\n") of
-        _ ->
-            receive
-                {Port, {data, {eol, []}}} ->
-                    {ok, Port};
-                {Port, {data, {eol, Other}}} ->
-                    erlang:erase(r_port),
-                    {error, Other}
+-spec r_exe() -> string() | ?R_ERR.
+r_exe() ->
+    case erlang:get(?R_KEY) of
+        undefined ->
+            R = case os:find_executable("R") of
+                false ->
+                    ?R_ERR;
+                File ->
+                    File
+            end,
+            _ = erlang:put(?R_KEY, R),
+            R;
+        Val ->
+            Val
+    end.
+
+-spec r_port() -> {ok, port()} | {error, term()}.
+r_port() ->
+    case erlang:get(?P_KEY) of
+        undefined ->
+            case r_exe() of
+                {error, _} = Err ->
+                    Err;
+                Exe ->
+                    Port = erlang:open_port({spawn_executable, Exe}, [
+                        {args, ["--vanilla", "--slave"]}, {line, 16384},
+                        use_stdio, exit_status, stderr_to_stdout, hide]),
+                    case r_port_(Port) of
+                        {error, _} = PErr ->
+                            PErr;
+                        ok ->
+                            _ = erlang:put(?P_KEY, Port),
+                            {ok, Port}
+                    end
+            end;
+        Prev ->
+            case r_port_(Prev) of
+                {error, _} = PErr ->
+                    _ = erlang:erase(?P_KEY),
+                    PErr;
+                ok ->
+                    {ok, Prev}
             end
+    end.
+
+-spec r_port_(Port :: port()) -> ok | {error, term()}.
+%% Check the status of the port
+r_port_(Port) ->
+    try
+        _ = erlang:port_command(Port, "write('', file=stdout())\n"),
+        receive
+            {Port, {data, {eol, []}}} ->
+                ok;
+            {Port, {data, {eol, Other}}} ->
+                {error, Other}
+        end
     catch
         error:badarg ->
-            erlang:erase(r_port),
             {error, port_closed}
     end.
 
@@ -106,5 +166,5 @@ to_number(Str) ->
             Value
     end.
 
--endif.
+-endif. % TEST
 

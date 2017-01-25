@@ -18,20 +18,32 @@
 %% under the License.
 %%
 %% -------------------------------------------------------------------
+
+%% @doc Histograms.
 -module(basho_stats_histogram).
 
--export([new/3,
-         update/2, update_all/2,
-         quantile/2,
-         counts/1,
-         observations/1,
-         summary_stats/1]).
+-export([
+    counts/1,
+    new/3,
+    observations/1,
+    quantile/2,
+    summary_stats/1,
+    update/2,
+    update_all/2
+]).
 
+-ifdef(TEST).
 -ifdef(EQC).
--export([prop_count/0, prop_quantile/0]).
--endif.
+-export([
+    prop_count/0,
+    prop_quantile/0
+]).
+-include_lib("eqc/include/eqc.hrl").
+-endif. % EQC
+-include_lib("eunit/include/eunit.hrl").
+-endif. % TEST
 
--include("stats.hrl").
+-define(FMT(Str, Args), lists:flatten(io_lib:format(Str, Args))).
 
 -record(hist, { n = 0,
                 min,
@@ -76,12 +88,8 @@ update(Value, Hist) ->
                 bins = gb_trees:enter(Bin, Counter + 1, Hist#hist.bins),
                 stats = basho_stats_sample:update(Value, Hist#hist.stats)}.
 
-
 update_all(Values, Hist) ->
-    lists:foldl(fun(Value, H) -> update(Value, H) end,
-                Hist, Values).
-
-
+    lists:foldl(fun update/2, Hist, Values).
 
 %%
 %% Estimate the quantile from the histogram. Quantile should be a value
@@ -175,14 +183,13 @@ bin_count(Bin, Hist) ->
 %% Unit Tests
 %% ===================================================================
 
--ifdef(EUNIT).
+-ifdef(TEST).
 
 simple_test() ->
     %% Pre-calculated tests
     [7,0] = counts(update_all([10,10,10,10,10,10,14], new(10,18,2))).
 
 -ifdef(EQC).
-
 
 qc_count_check(Min, Max, Bins, Xs) ->
     LCounts = counts(update_all(Xs, new(Min, Max, Bins))),
@@ -215,11 +222,12 @@ prop_count() ->
                     qc_count_check(Min, Max, Bins, Xs))))).
 
 qc_count_test() ->
-    true = eqc:quickcheck(prop_count()).
+    ?assertEqual(ok, basho_stats_utils:r_check()),
+    ?assertEqual(true, eqc:quickcheck(prop_count())).
 
 qc_quantile_check(Q, Min, Max, Bins, Xs) ->
     Hist = new(Min, Max, Bins),
-    LCounts = counts(update_all(Xs, Hist)),
+%%    LCounts = counts(update_all(Xs, Hist)),
     Lq = quantile(Q * 0.01, update_all(Xs, Hist)),
     [Rq] = basho_stats_utils:r_run(Xs, ?FMT("quantile(x, ~4.2f, type=4)", [Q * 0.01])),
     case abs(Lq - Rq) < 1 of
@@ -265,7 +273,8 @@ prop_quantile() ->
                                     qc_quantile_check(Q, Min, Max, Bins, Xs)))))).
 
 qc_quantile_test() ->
-    true = eqc:quickcheck(prop_quantile()).
+    ?assertEqual(ok, basho_stats_utils:r_check()),
+    ?assertEqual(true, eqc:quickcheck(prop_quantile())).
 
--endif.
--endif.
+-endif. % EQC
+-endif. % TEST

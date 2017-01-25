@@ -1,7 +1,6 @@
 %% -------------------------------------------------------------------
 %%
-%% stats: Statistics Suite for Erlang
-%%
+%% Copyright (c) 2011-2017 Basho Technologies, Inc.
 %% Copyright (c) 2009 Dave Smith (dizzyd@dizzyd.com)
 %%
 %% This file is provided to you under the Apache License,
@@ -19,20 +18,30 @@
 %% under the License.
 %%
 %% -------------------------------------------------------------------
+
+%% @doc Statistics Suite for Erlang.
 -module(basho_stats_sample).
 
--export([new/0,
-         update/2, update_all/2,
-         count/1,
-         min/1, mean/1, max/1,
-         variance/1, sdev/1,
-         summary/1]).
+-export([
+    count/1,
+    max/1,
+    mean/1,
+    min/1,
+    new/0,
+    sdev/1,
+    summary/1,
+    update/2,
+    update_all/2,
+    variance/1
+]).
 
--include("stats.hrl").
-
+-ifdef(TEST).
 -ifdef(EQC).
 -export([prop_main/0]).
--endif.
+-include_lib("eqc/include/eqc.hrl").
+-endif. % EQC
+-include_lib("eunit/include/eunit.hrl").
+-endif. % TEST
 
 -record(state, { n = 0,
                  min = 'NaN',
@@ -47,7 +56,7 @@
 
 new() ->
     #state{}.
-    
+
 update(Value, State) ->
     State#state {
       n   = State#state.n + 1,
@@ -92,7 +101,7 @@ sdev(State) ->
 
 summary(State) ->
     {min(State), mean(State), max(State), variance(State), sdev(State)}.
-            
+
 
 %% ===================================================================
 %% Internal functions
@@ -105,16 +114,16 @@ nan_min(V1, V2)    -> erlang:min(V1, V2).
 nan_max(V1, 'NaN') -> V1;
 nan_max('NaN', V1) -> V1;
 nan_max(V1, V2)    -> erlang:max(V1, V2).
-    
+
 
 %% ===================================================================
 %% Unit Tests
 %% ===================================================================
 
--ifdef(EUNIT).
+-ifdef(TEST).
 
 simple_test() ->
-    %% A few hand-checked values 
+    %% A few hand-checked values
     {1,3.0,5,2.5,1.5811388300841898} = summary(update_all([1,2,3,4,5], new())),
     {1,5.5,10,15.0,3.872983346207417} = summary(update_all(lists:seq(1,10,3), new())).
 
@@ -141,9 +150,8 @@ prop_main() ->
                 tuple_to_list(summary(update_all(Xs, new())))))).
 
 qc_test() ->
-    true = eqc:quickcheck(prop_main()).
+    ?assertEqual(ok, basho_stats_utils:r_check()),
+    ?assertEqual(true, eqc:quickcheck(prop_main())).
 
--endif.
-
-
--endif.
+-endif. % EQC
+-endif. % TEST

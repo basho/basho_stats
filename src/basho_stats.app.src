@@ -6,6 +6,6 @@
     {applications,  [kernel, stdlib, sasl]},
     {env,           []},
     {maintainers,   ["Basho Technologies, Inc.", "Heinz N. Gies"]},
-    {licenses,      ["Apache"]},
+    {licenses,      ["Apache 2.0"]},
     {links,         [{"Github", "https://github.com/basho/basho_stats"}]}
 ]}.
