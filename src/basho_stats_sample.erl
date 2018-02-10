@@ -149,9 +149,5 @@ prop_main() ->
             lists_equal(basho_stats_utils:r_run(Xs,"c(min(x), mean(x), max(x), var(x), sd(x))"),
                 tuple_to_list(summary(update_all(Xs, new())))))).
 
-qc_test() ->
-    ?assertEqual(ok, basho_stats_utils:r_check()),
-    ?assertEqual(true, eqc:quickcheck(prop_main())).
-
 -endif. % EQC
 -endif. % TEST

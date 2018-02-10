@@ -272,9 +272,5 @@ prop_quantile() ->
 
                                     qc_quantile_check(Q, Min, Max, Bins, Xs)))))).
 
-qc_quantile_test() ->
-    ?assertEqual(ok, basho_stats_utils:r_check()),
-    ?assertEqual(true, eqc:quickcheck(prop_quantile())).
-
 -endif. % EQC
 -endif. % TEST
