@@ -1,9 +1,8 @@
 language: erlang
-notifications:
-  webhooks: http://basho-engbot.herokuapp.com/travis?key=b0e0f79e75a1fb425caca181a7c780e7f9f28d69
-  email: eng@basho.com
 otp_release:
-  - R15B01
-  - R15B
-  - R14B04
-  - R14B03
+  - 20.3.8
+  - 21.3
+  - 22.1
+script:
+  - chmod u+x rebar3
+  - ./rebar3 do upgrade, compile, xref, dialyzer, eunit
